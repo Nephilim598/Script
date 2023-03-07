@@ -1,0 +1,64 @@
+
+Trunk - amin keresztülmegy akár  több vlannak az adatai (ahelyett hogy vlanonként 1kábelt kötnék)
+dot1q - 1 fizikai porton több virtual interface
+
+
+
+Switch(config)#int g0/1
+Switch(config-if)#switchport mode trunk
+
+
+Router(config)#int g0/0
+Router(config-if)#no sh
+Router(config)#int g0/0.10
+Router(config-subif)#encapsulation dot1Q 10
+Router(config-subif)#ip address 192.168.0.1 255.255.255.0
+
+Router(config)#int g0/0.20
+Router(config-subif)#ip address 192.168.1.1 255.255.255.0
+Router(config-subif)#encapsulation dot1Q 20
+
+
+
+line con 0
+pass cisco
+login
+exit
+line vty 0 4 
+pass cisco
+login
+exit
+enable secret cisco
+service password-encry
+banner motd #Meghatalmazassal#
+ip domain-name teszt.hu
+crypto key generate rsa general-keys modulus 1024
+ip ssh ver 2
+username admin privilege 15 pass cisco
+line vty 0 15
+login local
+transport input ssh
+privilege level 15
+ip dhcp excluded-address 192.168.0.1 192.168.0.10
+ip dhcp pool lan10
+network 192.168.0.0 255.255.255.0
+default-router 192.168.0.1
+dns-server 1.1.1.1
+exit
+ip dhcp excluded-address 192.168.1.1 192.168.1.10
+ip dhcp pool lan20
+network 192.168.1.0 255.255.255.0
+default-router 192.168.1.1
+dns-server 1.1.1.1
+exit
+
+
+
+
+
+
+
+
+
+
+

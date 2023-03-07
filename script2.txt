@@ -1,0 +1,50 @@
+hostname
+line con 0
+password cisco
+login
+exit
+line vty 0 15
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption
+security passwords min-length 10
+login block-for 120 attempts 5 within 60
+banner motd " Csak hitelesített felhaszoknak! "
+interface g0/0
+ip address 192.168.1.1 255.255.255.0
+no sh
+exit
+ipv6 unicast-routing
+int fa 0/0
+ipv6 enable
+ipv6 address 2001:db8:1111:2::/64
+no shutdown
+ip dhcp pool lan1
+domain-name teszt.hu
+network 192.168.0.0 255.255.255.0
+default-router 192.168.0.1
+dns-server 1.2.3.4
+exit
+ip dhcp excluded-address 192.168.0.1 192.168.0.10
+ip domain-name teszt.hu
+crypto key generate rsa
+1024
+ip ssh version 2
+username admin privilege 15 password cisco
+line vty 0 15
+login local
+transport input ssh
+privilege level 15
+exit
+
+
+
+
+
+
+
+
+
+
