@@ -1,0 +1,360 @@
+Hálózat		tartomány		Broadcast	prefix		mask
+172.16.0.0	172.16.0.1-62		172.16.0.63	/26	255.255.255.192
+172.16.0.64	172.16.0.65-126 	172.16.0.127
+172.16.0.128	172.16.0.129-190	172.16.0.191
+
+172.16.0.192	172.16.0.193-254	172.16.0.255
+
+
+elrendezés:    O -- H -- PC    <-- jobb oldal (17-es)
+	       N
+	       O -- H -- PC    <-- bal oldal (16-os)
+
+
+ROUTING:
+
+R1:
+ip route 172.17.0.0 255.255.255.192 s0/1/0
+ip route 172.17.0.64 255.255.255.192 s0/1/0
+ip route 172.17.0.128 255.255.255.192 s0/1/0
+
+
+
+
+R2:
+ip route 172.16.0.0 255.255.255.192 s0/1/0
+ip route 172.16.0.64 255.255.255.192 s0/1/0
+ip route 172.16.0.128 255.255.255.192 s0/1/0
+
+
+
+---------------------------------------------------------------------------------------------------
+
+BALOLDAL:
+
+R1:
+
+	enable
+	conf t
+	hostname R1
+	banner motd #Belepes csak meghatalmazassal!#
+	login block-for 100 attempts 15 within 180
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	line aux 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	ip domain-name R1.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2	
+
+
+int f0/1
+no sh
+exit
+
+int f0/1.10
+encapsulation dot1Q 10
+ip address 172.16.0.1 255.255.255.192
+exit
+
+int f0/1.20
+encapsulation dot1Q 20
+ip address 172.16.0.65 255.255.255.192
+
+int f0/1.30
+encapsulation dot1Q 30
+ip address 172.16.0.129 255.255.255.192
+
+
+int s0/1/0
+ip address 10.0.0.1 255.255.255.252
+no sh
+exit
+
+
+
+
+ip dhcp excluded-address 172.16.0.1 172.16.0.10
+ip dhcp pool lan10
+network 172.16.0.0 255.255.255.192
+default-router 172.16.0.1
+exit
+
+
+ip dhcp excluded-address 172.16.0.65 172.16.0.75
+ip dhcp pool lan20
+network 172.16.0.64 255.255.255.192
+default-router 172.16.0.65
+exit
+
+
+
+ip dhcp excluded-address 172.16.0.129 172.16.0.130
+ip dhcp pool lan30
+network 172.16.0.128 255.255.255.192
+default-router 172.16.0.129
+exit
+
+
+
+
+
+
+
+SW1:
+	enable
+	conf t
+	hostname SW1
+	banner motd #Belepes csak meghatalmazassal!#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	ip domain-name SW1.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+
+	interface vlan 10
+	ip address 172.16.0.2 255.255.255.192
+	no shutdown
+	exit
+
+	interface vlan 20
+	ip address 172.16.0.66 255.255.255.192
+	no shutdown
+	exit
+
+	interface vlan 30
+	ip address 172.16.0.130 255.255.255.192
+	no shutdown
+	exit
+
+	int range f0/1-6
+	switchport mode access
+	switchport access vlan 10
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+
+	int range f0/7-13
+	switchport mode access
+	switchport access vlan 20
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+
+	int range f0/14-24
+	switchport mode access
+	switchport access vlan 30
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+	
+	int g0/1
+	switchport mode trunk
+	no sh
+
+
+
+-----------------------------------------------------------------------------------------
+
+JOBB OLDAL:
+
+R2:
+
+	enable
+	conf t
+	hostname R2
+	banner motd #Belepes csak meghatalmazassal!#
+	login block-for 100 attempts 15 within 180
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	line aux 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	ip domain-name R2.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2	
+
+
+int f0/1
+no sh
+exit
+
+int f0/1.10
+encapsulation dot1Q 10
+ip address 172.17.0.1 255.255.255.192
+exit
+
+int f0/1.20
+encapsulation dot1Q 20
+ip address 172.17.0.65 255.255.255.192
+
+int f0/1.30
+encapsulation dot1Q 30
+ip address 172.17.0.129 255.255.255.192
+
+
+int s0/1/0
+ip address 10.0.0.2 255.255.255.252
+no sh
+exit
+
+
+
+ip dhcp excluded-address 172.17.0.1 172.17.0.10
+ip dhcp pool lan10
+network 172.17.0.0 255.255.255.192
+default-router 172.17.0.1
+exit
+
+
+ip dhcp excluded-address 172.17.0.65 172.17.0.75
+ip dhcp pool lan20
+network 172.17.0.64 255.255.255.192
+default-router 172.17.0.65
+exit
+
+
+
+ip dhcp excluded-address 172.17.0.129 172.17.0.130
+ip dhcp pool lan30
+network 172.17.0.128 255.255.255.192
+default-router 172.17.0.129
+exit
+
+
+
+
+
+
+
+SW2:
+	enable
+	conf t
+	hostname SW2
+	banner motd #Belepes csak meghatalmazassal!#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	ip domain-name SW2.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+
+	interface vlan 10
+	ip address 172.17.0.2 255.255.255.192
+	no shutdown
+	exit
+
+	interface vlan 20
+	ip address 172.17.0.66 255.255.255.192
+	no shutdown
+	exit
+
+	interface vlan 30
+	ip address 172.17.0.130 255.255.255.192
+	no shutdown
+	exit
+
+	int range f0/1-6
+	switchport mode access
+	switchport access vlan 10
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+
+	int range f0/7-13
+	switchport mode access
+	switchport access vlan 20
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+
+	int range f0/14-24
+	switchport mode access
+	switchport access vlan 30
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+	
+	int g0/1
+	switchport mode trunk
+	no sh
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
