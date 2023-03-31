@@ -1,0 +1,470 @@
+ROUTER:
+
+router alapbeállításai:
+	-idő
+	-név
+	-banner
+	-ip
+	-jelszó/secret
+	-telnet/ssh
+	-line-oknak pass
+	-konfig mentése
+
+
+
+--------------------------------------------------------
+
+ipv6 aktiválás:
+	ena
+	conf t
+	ipv6 unicast-routing
+	int g0/0
+	ipv6 enable
+	ipv6 address A::1/64
+	ipv6 add FE80::1 link-local
+	no sh
+(A default-gateway is FE80::1)
+
+
+
+--------------------------------------------------------
+
+routing ipv4:
+	nyomonkövetés - traceroute "ip"
+	show ip route
+	show ip route (opciók: summary, eigrp, bgp, ospf, rip, static, connected)
+	show ip route "hálózat"
+	Router(config)# ip route hálózati-cím alhálózati-maszk { IP-cím | interfész-típus interfész-szám [ IP-cím ]} [ távolság ] [ name név ] [ permanent ] [ tag címke ] 
+	alapértelmezett útvonal - ip route 0.0.0.0 0.0.0.0 { IP-cím | kimenő-interfész }
+	Lebegő útvonal - R1(config)#ip route 192.168.20.0 255.255.255.0 S0/0/0 89
+	Lebegő útvonalak adminisztratív távolsága: Statikus-1, EIGRP-90, IGRP-100, OSPF-110, IS-IS-115, RIP-120
+
+
+--------------------------------------------------------
+
+Összevont útvonal meghatározása:
+	felírjuk a hálózati címeket binárisan
+	meghatározzuk balról mennyi bit egyezik
+	az egyező bitek után részt 0-val egészítjük ki 32 bit hosszúra
+
+	példa:    192.168.0.0/24 - 11000000 10101000 00000000 00000000
+		  192.168.1.0/24 - 11000000 10101000 00000001 00000000
+		  192.168.2.0/24 - 11000000 10101000 00000010 00000000
+		  192.168.3.0/24 - 11000000 10101000 00000011 00000000
+	eredmény: 192.168.0.0/22 - 11000000 10101000 00000000 00000000
+
+	beállítás:R1(config)# ip route 192.168.0.0 255.255.252.0 s0/0/0
+
+
+
+
+
+routing ipv6:
+	show ipv6 route
+	show ipv6 route static
+	show ipv6 route "hálózat"
+	Router(config)# ipv6 route ipv6-előtag/előtag-hossz { ipv6-cím | kimenő-interfész }
+	alapértelmezett útvonal - ipv6 route ::/0 { ipv6-cím | kimenő-interfész }
+
+Összevonás lépései:
+	címek felsorolása
+	rövidítések kiegészítése
+	eltérő címek meghatározása
+	eltérő részeket binárissá alakítjuk
+	egyező biteket megszámoljuk
+	egyező bitek kiegészítése 0-val
+	bináris részt visszaalakítjuk hex számmá
+	megadjuk az előtagot
+
+	Ipv6 tömörítve:
+		2001:0db8:def:1::/64
+		2001:0db8:def:2::/64
+		2001:0db8:def:3::/64
+		2001:0db8:def:4::/64
+
+	Ipv6 kioldottabb:
+		2001:0db8:0def:0001::/64
+		2001:0db8:0def:0002::/64
+		2001:0db8:0def:0003::/64
+		2001:0db8:0def:0004::/64
+
+	Ipv6 "teljes" kiírt:
+		2001:0db8:0def:0000000000000001::/64
+		2001:0db8:0def:0000000000000010::/64
+		2001:0db8:0def:0000000000000011::/64
+		2001:0db8:0def:0000000000000100::/64
+
+		 16   16   16       13
+	        bit + bit + bit +   bit   =  /61
+
+ 	Eredmény: 2001:0db8:0def:0000:: /61
+
+	Végeredmény a fentebbi 3 formában:
+				2001:0db8:0def:0000::/61
+				2001:0db8:0def:0::/61
+				2001:0db8:0def::/61
+
+
+	 Beállítás: R1(config)# ipv6 route 2001:db8:def:0::/61 s0/0/0
+
+
+
+
+--------------------------------------------------------
+
+Ssh:
+	ip domain-name R1.hu
+	crypto key generate rsa generate-key modulus 1024
+	user admin priv 15 secret cisco
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	ip ssh version 2
+
+
+
+--------------------------------------------------------
+
+
+Telnet beállítása:
+	R1(config)#line vty 0 15
+	R1(config-line)#password titok
+	R1(config-line)#login
+	R1(config-line)#end
+
+
+
+--------------------------------------------------------
+
+
+Idő:
+	clock set "H:M:S" "D.M.Y"
+
+
+
+
+--------------------------------------------------------
+
+DHCP:
+	ip dhcp pool Lan1
+	network 192.168.0.0 255.255.255.0
+	default-router 192.168.0.1
+	dns 8.8.8.8
+
+
+--------------------------------------------------------
+
+Naplózás/bejelentkezes/kiléptetés:
+	Naplózzuk a sikertelen SSH belépési kísérleteket - R1(config)#login on-failure log
+	Console naplózás - R1(config)#logging console
+	Idő beállítása naplózáshoz - R1(config)# service timestamps log datetime msec
+	Idő beállítása naplózáshoz - R1(config)# service timestamps debug datetime msec
+	
+	Mennyi idő után lépjen ki automatikusan (pl:console kapcsolatból) - R1(config-line)#exec-timeout 2 30
+	Sikertelen bejelentkezések - R1(config)#login block-for 100 attempts 15 within 180
+	
+
+--------------------------------------------------------
+
+
+RIP:
+	router rip
+	version 2
+	network "hálózatcím"
+	passive-interface "xy"
+
+Network-nél a saját kapcsolatait kell megadni
+
+
+--------------------------------------------------------
+
+
+
+igrp
+
+R1(config)#router igrp "router igrp autonóm_rendszer_száma"
+R1(config-router)#network 172.16.8.0
+R1(config-router)#network 192.168.5.0
+R1(config-router)#end
+
+Az autonóm rendszerbe tartozó útválasztókon azonos számot állítunk be. 
+A példában 8-as. Minden útválasztó, amelyben a 8-as szám van beállítva útválasztó információkat cserél.
+
+
+
+--------------------------------------------------------
+
+EIGRP
+
+
+R1(config)#router eigrp 8
+R1(config-router)#network 172.16.8.0
+R1(config-router)#network 192.168.5.0
+R1(config-router)#end
+
+Az autonóm rendszerbe tartozó útválasztókon azonos számot állítunk be. 
+A példában 8-as. Minden útválasztó, amelyben a 8-as szám van beállítva útválasztó információkat cserél.
+
+
+
+--------------------------------------------------------
+
+OSPF:
+
+
+R1:
+
+en
+conf t
+host r0
+ipv6 unicast-routing
+ipv6 router ospf 1
+router-id 1.1.1.1
+int g0/0/0
+ipv6 enable
+ipv6 address 2001:db8:cafe:11::1/64
+ipv6 address fe80::1 link-local
+ipv6 ospf 1 area 0
+no sh
+int s0/1/0
+ipv6 enable
+ipv6 address 2001:db8:cafe:22::1/64
+ipv6 address fe80::1 link-local
+ipv6 ospf 1 area 0
+no sh
+ex
+
+
+R2:
+
+en
+conf t
+host r1
+ipv6 unicast-routing
+ipv6 router ospf 1
+router-id 2.2.2.2
+int s0/1/0
+ipv6 enable
+ipv6 address 2001:db8:cafe:22::2/64
+ipv6 address fe80::1 link-local
+ipv6 ospf 1 area 0
+no sh
+int s0/1/1
+ipv6 enable
+ipv6 address 2001:db8:cafe:33::1/64
+ipv6 address fe80::1 link-local
+ipv6 ospf 1 area 0
+no sh
+
+
+-----------------------------------------------------------------
+
+DHCP IPV4 / IPV6 PÉLDA:
+
+R1:
+
+en
+conf t
+hostname R3
+ipv6 unicast-routing
+int g0/0/1
+ipv6 enable
+ipv6 address 2000::1/64
+ipv6 add fe80::1 link-local
+ip add 192.168.0.1 255.255.255.0
+no shut
+int g0/0/0
+ipv6 enable
+ipv6 address 2000:1::1/64
+ipv6 add fe80::1 link-local
+ip add 192.168.1.1 255.255.255.252
+no shut
+exit
+ip dhcp excluded-address 192.168.0.1 192.168.0.10
+ip dhcp pool lan10
+network 192.168.0.0 255.255.255.0
+default-router 192.168.0.1
+exit
+
+
+DHCPv6:
+
+ipv6 unicast-routing
+ipv6 dhcp pool Lan1
+address prefix 2000:1::/64
+DNS 2000:4::2
+domain-name R3.com
+int g0/0/1
+ipv6 enable
+ipv6 dhcp server Lan1
+ipv6 nd managed-config-flag
+ipv6 address 2000:1::1/64
+ipv6 add fe80::1 link-local
+
+------------------------------------------------------------
+
+
+
+
+
+
+
+Példa:
+	enable
+	clock set 23:10:00 21 nov 2022
+	conf t
+	hostname R1
+	banner motd #Belepes csak meghatalmazassal!#
+	login block-for 100 attempts 15 within 180
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	line console 0
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	line aux 0
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface g0/0
+	ip address 192.168.1.1 255.255.255.0
+	no shutdown
+	exit
+	do wr
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+
+
+
+SWITCH:
+
+
+Switch alapbeállításai:
+	-név
+	-jelszó/ secret
+	-line-oknak pass
+	-banner
+	-Alapértelmezett átjáró 
+	-konfig mentése
+
+
+--------------------------------------------------------
+
+
+Naplózás:
+	Mint a routernél.
+
+
+--------------------------------------------------------
+
+
+
+Kábel felismerés:
+	S1(config-if)# mdix auto
+
+--------------------------------------------------------
+
+
+
+Portbiztonság beállítása:
+	S1(config)#int f0/1
+	S1(config-if)#switchport mode access
+	S1(config-if)#switchport access vlan 99
+	S1(config-if)#switchport port-security
+	S1(config-if)#switchport port-security maximum 2
+	S1(config-if)#switchport port-security mac-address sticky
+	S1(config-if)#switchport port-security violation protect / vagy restrict 
+ 	"felesleges portok lekapcsolása"
+
+--------------------------------------------------------
+
+Ssh:
+	ip domain-name R1.hu
+	crypto key generate rsa generate-key modulus 1024
+	user admin priv 15 secret cisco
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	ip ssh version 2
+
+--------------------------------------------------------
+
+
+Telnet beállítása:
+	S1(config)#line vty 0 4
+	S1(config-line)#password titok
+	S1(config-line)#login
+	S1(config-line)#end
+
+
+--------------------------------------------------------
+
+
+Alapértelmezett átjáró beállítása:
+	S1(config)#ip default-gateway "IP"
+
+--------------------------------------------------------
+
+
+Példa:
+	enable
+	clock set 23:10:00 21 nov 2022
+	conf t
+	hostname Sw1
+	banner motd #alapkonfig#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	line console 0
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface vlan 1
+	ip address 192.168.1.2 255.255.255.0
+	no shutdown
+	exit
+	int f0/1
+	switchport mode access
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation restrict 
+	int range f0/2-24, g0/1-2
+	switchport mode access
+	switchport access vlan 99
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation restrict 
+	do wr
