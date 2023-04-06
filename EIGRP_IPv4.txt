@@ -1,0 +1,336 @@
+R1(config)# router eigrp 1
+R1(config-router)# eigrp rotuer-id 1.1.1.1
+network <IP_cím> <helyettesítő_maszk vagy maszk>
+
+
+
+alapértelmezett útvonal terjesztése - R1(config-router)# redistribute static
+
+R1(config-router)# no auto-summary
+
+
+ELL:
+
+R1# show ip eigrp neighbor
+R1# show ip eigrp topology
+R1# show running-config
+R1# show ip protocols
+R1# show ip route
+
+
+
+elhelyezkedés - 3 szög alakban
+
+
+----------------------------------------------------
+
+
+
+EIGRP:
+
+Hálózat		tartomány		Broadcast	prefix		mask
+172.18.0.0	172.18.0.1-62		172.18.0.63	/26	255.255.255.192
+172.18.0.64	172.18.0.65-126 	172.18.0.127
+172.18.0.128	172.18.0.129-190	172.18.0.191
+
+172.18.0.192	172.18.0.193-254	172.18.0.255
+
+
+
+
+R0:
+
+	enable
+	clock set 14:20:00 28 mar 2023
+	conf t
+	hostname R0
+	banner motd #Belepes csak meghatalmazassal!#
+	login block-for 100 attempts 15 within 180
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	password cisco
+	login
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	line aux 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface s0/0/1
+	ip address 10.0.0.10 255.255.255.252
+	no shutdown
+	exit
+	interface s0/0/0
+	ip address 10.0.0.1 255.255.255.252
+	no shutdown
+	exit
+	interface g0/1
+	ip address 172.18.0.1 255.255.255.192
+	no shutdown
+	exit
+	ip dhcp exc 172.18.0.1 172.18.0.10
+	ip dhcp pool Lan1
+	network 172.18.0.1 255.255.255.192
+	default-router 172.18.0.1
+
+	ip domain-name R0.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+
+	router eigrp 1
+	eigrp router-id  1.1.1.1
+	network 172.18.0.0 0.0.0.63
+	network 10.0.0.8 0.0.0.3
+	network 10.0.0.0 0.0.0.3
+
+----------------------------------------------------------------------
+
+R1:
+
+	enable
+	clock set 14:20:00 28 mar 2023
+	conf t
+	hostname R1
+	banner motd #Belepes csak meghatalmazassal!#
+	login block-for 100 attempts 15 within 180
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	password cisco
+	login
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	line aux 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface s0/0/1
+	ip address 10.0.0.2 255.255.255.252
+	no shutdown
+	exit
+	interface s0/0/0
+	ip address 10.0.0.5 255.255.255.252
+	no shutdown
+	exit
+	interface g0/1
+	ip address 172.18.0.65 255.255.255.192
+	no shutdown
+	exit
+	ip dhcp exc 172.18.0.65 172.18.0.75
+	ip dhcp pool Lan1
+	network 172.18.0.64 255.255.255.192
+	default-router 172.18.0.65
+
+	ip domain-name R1.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+
+	router eigrp 1
+	eigrp router-id  2.2.2.2
+	network 172.18.0.64 0.0.0.63
+	network 10.0.0.4 0.0.0.3
+	network 10.0.0.0 0.0.0.3
+
+------------------------------------------------------------------
+
+R2:
+
+	enable
+	clock set 14:20:00 28 mar 2023
+	conf t
+	hostname R2
+	banner motd #Belepes csak meghatalmazassal!#
+	login block-for 100 attempts 15 within 180
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	password cisco
+	login
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	line aux 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface s0/0/1
+	ip address 10.0.0.6 255.255.255.252
+	no shutdown
+	exit
+	interface s0/0/0
+	ip address 10.0.0.9 255.255.255.252
+	no shutdown
+	exit
+	interface g0/1
+	ip address 172.18.0.129 255.255.255.192
+	no shutdown
+	exit
+	ip dhcp exc 172.18.0.129 172.18.0.140
+	ip dhcp pool Lan1
+	network 172.18.0.128 255.255.255.192
+	default-router 172.18.0.129
+
+	ip domain-name R2.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+
+	router eigrp 1
+	eigrp router-id  3.3.3.3
+	network 172.18.0.128 0.0.0.63
+	network 10.0.0.4 0.0.0.3
+	network 10.0.0.8 0.0.0.3
+
+------------------------------------------------------------------------
+
+S0:
+
+	enable
+	clock set 14:20:00 28 mar 2023
+	conf t
+	hostname S0
+	banner motd #Belepes csak meghatalmazassal!#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line console 0
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface vlan 1
+	ip address 172.18.0.2 255.255.255.192
+	no shutdown
+	exit
+	ip domain-name S0.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+	int range f0/1, g0/1
+	switchport mode access
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation shutdown
+	int range f0/2-24, g0/2
+	switchport mode access
+	switchport access vlan 99
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation shutdown 
+	exit
+	ip default-gateway 172.18.0.1
+
+--------------------------------------------------------
+
+S1:
+
+	enable
+	clock set 14:20:00 28 mar 2023
+	conf t
+	hostname S1
+	banner motd #Belepes csak meghatalmazassal!#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line console 0
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface vlan 1
+	ip address 172.18.0.66 255.255.255.192
+	no shutdown
+	exit
+	ip domain-name S1.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+	int range f0/1, g0/1
+	switchport mode access
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation shutdown
+	int range f0/2-24, g0/2
+	switchport mode access
+	switchport access vlan 99
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation shutdown 
+	exit
+	ip default-gateway 172.18.0.65
+
+-------------------------------------------------------------------------
+
+S2:
+
+	enable
+	clock set 14:20:00 28 mar 2023
+	conf t
+	hostname S2
+	banner motd #Belepes csak meghatalmazassal!#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line console 0
+	password cisco
+	login
+	exec-timeout 2 30
+	exit
+	enable secret cisco
+	service password-encryption 
+	interface vlan 1
+	ip address 172.18.0.130 255.255.255.192
+	no shutdown
+	exit
+	ip domain-name S2.hu
+	crypto key generate rsa general-keys modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+	int range f0/1, g0/1
+	switchport mode access
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation shutdown
+	int range f0/2-24, g0/2
+	switchport mode access
+	switchport access vlan 99
+	switchport port-security
+	switchport port-security maximum 2
+	switchport port-security mac-address sticky
+	switchport port-security violation shutdown 
+	exit
+	ip default-gateway 172.18.0.129
+
+
+
+
+
