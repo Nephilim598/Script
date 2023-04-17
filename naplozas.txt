@@ -1,0 +1,15 @@
+syslog:
+
+	logging on
+	login on-failure log
+	login on-success log
+	logging console
+	logging buffered
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	logging host "syslogserverIP"
+
+
+
+
+show logging
