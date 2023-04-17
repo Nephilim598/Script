@@ -34,7 +34,7 @@ exit
 enable secret cisco
 service password-encryption 
 ip domain-name R1.hu
-crypto key general rsa generate-key modulus 1024
+crypto key general rsa general-key modulus 1024
 username admin priv 15 secret cisco
 ip ssh version 2
 int f0/0
@@ -79,7 +79,7 @@ exit
 enable secret cisco
 service password-encryption 
 ip domain-name S1.hu
-crypto key general rsa generate-key modulus 1024
+crypto key general rsa general-key modulus 1024
 username admin priv 15 secret cisco
 ip ssh version 2
 interface vlan 10
@@ -127,7 +127,7 @@ exit
 enable secret cisco
 service password-encryption 
 ip domain-name S2.hu
-crypto key general rsa generate-key modulus 1024
+crypto key general rsa general-key modulus 1024
 username admin priv 15 secret cisco
 ip ssh version 2
 interface vlan 30
