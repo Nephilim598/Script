@@ -1,0 +1,156 @@
+elrendezes(baloldal(Owls csapat)):
+
+	o--
+       / \
+      H   H
+      l   l
+      M   M
+
+
+
+
+
+
+
+
+
+R1:
+enable
+conf t
+hostname R1
+banner motd #Belepes csak meghatalmazassal!#
+line vty 0 15
+login local
+transport input ssh
+exit
+line console 0
+password cisco
+login
+exit
+line aux 0
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption 
+ip domain-name R1.hu
+crypto key general rsa generate-key modulus 1024
+username admin priv 15 secret cisco
+ip ssh version 2
+int f0/0
+no sh	
+int f0/0.10
+encapsulation dot1Q 10
+ip address 192.168.0.1 255.255.255.0	
+int f0/0.20
+encapsulation dot1Q 20
+ip address 192.168.1.1 255.255.255.0
+exit
+int f0/1
+no sh
+int f0/1.30
+encapsulation dot1Q 30
+ip address 192.168.2.1 255.255.255.0
+exit
+int f0/1
+no sh	
+int f0/1.40
+encapsulation dot1Q 40
+ip address 192.168.3.1 255.255.255.0
+exit
+int s0/1/0
+ip add 192.168.4.1 255.255.255.0
+no sh
+exit
+
+S1:
+enable
+conf t
+hostname S1
+banner motd #Belepes csak meghatalmazassal!#
+line vty 0 15
+login local
+transport input ssh
+exit
+line console 0
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption 
+ip domain-name S1.hu
+crypto key general rsa generate-key modulus 1024
+username admin priv 15 secret cisco
+ip ssh version 2
+interface vlan 10
+ip address 192.168.0.2 255.255.255.0
+no shutdown
+exit
+interface vlan 20
+ip address 192.168.1.2 255.255.255.0
+no shutdown
+exit
+int range f0/1-12
+switchport mode access
+switchport access vlan 10
+switchport port-security
+switchport port-security maximum 3
+switchport port-security mac-address sticky
+switchport port-security violation shut
+int range f0/13-24
+switchport mode access
+switchport access vlan 20
+switchport port-security
+switchport port-security maximum 3
+switchport port-security mac-address sticky
+switchport port-security violation shut
+int g0/1
+switchport mode trunk
+no sh
+
+
+
+
+S2
+enable
+conf t
+hostname S2
+banner motd #Belepes csak meghatalmazassal!#
+line vty 0 15
+login local
+transport input ssh
+exit
+line console 0
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption 
+ip domain-name S2.hu
+crypto key general rsa generate-key modulus 1024
+username admin priv 15 secret cisco
+ip ssh version 2
+interface vlan 30
+ip address 192.168.2.2 255.255.255.0
+no shutdown
+exit
+interface vlan 40
+ip address 192.168.3.2 255.255.255.0
+no shutdown
+int range f0/1-12
+switchport mode access
+switchport access vlan 30
+switchport port-security
+switchport port-security maximum 3
+switchport port-security mac-address sticky
+switchport port-security violation shut
+int range f0/13-24
+switchport mode access
+switchport access vlan 40
+switchport port-security
+switchport port-security maximum 3
+switchport port-security mac-address sticky
+switchport port-security violation shut
+int g0/1
+switchport mode trunk
+no sh
