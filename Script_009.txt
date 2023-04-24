@@ -1,0 +1,182 @@
+megjegyzés: csapatok kötése
+
+
+elrendezés:   o--
+	     / \
+	    H   H
+	    l   l
+	    M   M
+
+
+
+
+
+
+192.168.1.0  	/24	255.255.255.0 
+192.168.2.0  	/24	255.255.255.0 
+192.168.3.0  	/24	255.255.255.0
+
+
+
+
+
+
+
+R1:
+
+	enable
+	conf t
+	hostname R1
+	banner motd #Belepes csak meghatalmazassal!#
+	login block-for 100 attempts 15 within 180
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	line aux 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	ip domain-name R1.hu
+	crypto key generate rsa general-key modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2	
+
+
+int f0/1
+no sh
+exit
+
+int f0/1.10
+encapsulation dot1Q 10
+ip address 192.168.2.1 255.255.255.128 
+exit
+
+int f0/1.20
+encapsulation dot1Q 20
+ip address 192.168.2.129 255.255.255.128
+
+
+int f0/0
+ip address 192.168.1.1 255.255.255.0 
+no sh
+exit
+
+int s0/1/0
+ip address 192.168.3.1 255.255.255.0
+no sh
+exit
+
+ip route 0.0.0.0 0.0.0.0 s0/1/0
+
+router rip
+version 2
+network 192.168.1.0
+network 192.168.2.0
+network 192.168.3.0
+
+
+
+SW1:
+	enable
+	conf t
+	hostname SW1
+	banner motd #Belepes csak meghatalmazassal!#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	ip domain-name SW1.hu
+	crypto key generate rsa general-key modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+
+	interface vlan 10
+	ip address 192.168.2.2 255.255.255.128 
+	no shutdown
+	exit
+
+	interface vlan 20
+	ip address 192.168.2.130 255.255.255.128
+	no shutdown
+	exit
+
+
+	int range f0/1-12
+	switchport mode access
+	switchport access vlan 10
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+
+	int range f0/13-24
+	switchport mode access
+	switchport access vlan 20
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+
+	int g0/1
+	switchport mode trunk
+	no sh
+
+
+
+
+
+SW2:
+	enable
+	conf t
+	hostname SW2
+	banner motd #Belepes csak meghatalmazassal!#
+	logging console
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	line vty 0 15
+	login local
+	transport input ssh
+	exit
+	line console 0
+	password cisco
+	login
+	exit
+	enable secret cisco
+	service password-encryption 
+	ip domain-name SW2.hu
+	crypto key generate rsa general-key modulus 1024
+	username admin priv 15 secret cisco
+	ip ssh version 2
+
+	interface vlan 1
+	ip address 192.168.1.2 255.255.255.0 
+	no shutdown
+	exit
+
+
+	int range f0/1-24
+	switchport mode access
+	switchport port-security
+	switchport port-security maximum 3
+	switchport port-security mac-address sticky
+	switchport port-security violation shut
+
