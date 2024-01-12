@@ -151,7 +151,8 @@ DHCP:
 	network 192.168.0.0 255.255.255.0
 	default-router 192.168.0.1
 	dns 8.8.8.8
-
+	exit
+	ip dhcp excluded-address "tólip"  "igip"
 
 --------------------------------------------------------
 
@@ -164,17 +165,35 @@ Naplózás/bejelentkezes/kiléptetés:
 	Mennyi idő után lépjen ki automatikusan (pl:console kapcsolatból) - R1(config-line)#exec-timeout 2 30
 	Sikertelen bejelentkezések - R1(config)#login block-for 100 attempts 15 within 180
 	
-
 --------------------------------------------------------
+syslog:
 
+	logging on
+	login on-failure log
+	login on-success log
+	logging console
+	logging buffered
+	service timestamps log datetime msec
+	service timestamps debug datetime msec
+	logging host "syslogserverIP"
+
+
+
+
+show logging
+--------------------------------------------------------
+Alapértelmezett út tovább adása: default-information originate
 
 RIP:
 	router rip
 	version 2
+	no auto-summary
+	default-information originate
 	network "hálózatcím"
 	passive-interface "xy"
 
 Network-nél a saját kapcsolatait kell megadni
+
 
 
 --------------------------------------------------------
@@ -302,6 +321,39 @@ ipv6 nd managed-config-flag
 ipv6 address 2000:1::1/64
 ipv6 add fe80::1 link-local
 
+
+
+------------------------------------------------------------
+NAT/D.NAT/PAT:
+
+mindig kell belső és külső interfész konfiguráció (ip nat inside / outside)
+
+Statikus NAT:
+Router(config)# ip nat inside source static "felsőfordítandócím" "választottkülsőcímre"
+
+
+Pool:
+ip nat pool mypoolname "ettőlip" "eddigip" netmask "eddigipMASK"
+
+
+D.NAT:
+Kell a Pool!
+ip nat inside source list 1 pool mypoolname overload
+access-list 1 permit "belsőhalozatodip" "wildcardja"
+
+
+PAT:
+ip nat inside source list 1 interface serial 0/1/1 overload
+access-list 1 permit "belsőhaloip" "hozzatartozowildcard"
+
+(ez így a belsődet 1 címre fordítja, ha többre kell akkor csinálj Pool-t mellé. (alább van példa))
+
+Példa:
+
+	ip nat pool Po1 193.65.40.6 193.65.40.7 netmask 255.255.255.240
+	access-list 1 permit 192.168.0.0 0.0.0.255
+	ip nat inside source list 1 pool Po1 over
+
 ------------------------------------------------------------
 
 
@@ -312,7 +364,7 @@ ipv6 add fe80::1 link-local
 
 Példa:
 	enable
-	clock set 23:10:00 21 nov 2022
+	clock set 19:00:00 12 jan 2024
 	conf t
 	hostname R1
 	banner motd #Belepes csak meghatalmazassal!#
@@ -320,20 +372,22 @@ Példa:
 	logging console
 	service timestamps log datetime msec
 	service timestamps debug datetime msec
+	no ip domain-lookup
 	line vty 0 15
 	password cisco
 	login
-	exec-timeout 2 30
+	exec-timeout 5
 	exit
 	line console 0
 	password cisco
 	login
-	exec-timeout 2 30
+	logging synchronous
+	exec-timeout 5
 	exit
 	line aux 0
 	password cisco
 	login
-	exec-timeout 2 30
+	exec-timeout 5
 	exit
 	enable secret cisco
 	service password-encryption 
@@ -427,26 +481,131 @@ Alapértelmezett átjáró beállítása:
 	S1(config)#ip default-gateway "IP"
 
 --------------------------------------------------------
+STP:
+Kapcsolónként csak egy gyökérport van.
+designated ports - Minden olyan, a hálózatba forgalmat továbbító port, amely nem gyökérport
 
+Ha egy trönk egyik vége gyökérport, a másik vége kijelölt port lesz. Egy gyökérponti híd minden portja kijelölt port.
+
+Alternatív és tartalék portok (alternate and bacup ports) - Az alternatív és a tartalék portok a hurkok megelőzése céljából lezárt állapotban vannak.
+Azokon a trönkvonalakon jönnek létre alternatív portok, amelyeknek egyik vége sem gyökérport. 
+
+Letiltott portok (disabled ports) - Olyan kapcsoló port, amely le van kapcsolva (shut down).
+
+PVST+ és a rapid  támogatják a PortFast, UplinkFast, BackboneFast, BPDU-védelem, BPDU-szűrő, gyökér védelem és hurokvédelem funkciókat. 
+
+show spanning-tree
+show spanning-tree active 
+
+	S1(config)#int XY
+	S1(config-if)# spanning-tree cost XY - a kisebb számú interface lesz a root
+
+
+A Gyökérponti híddá tenni, a hídprioritását úgy kell beállítania, hogy a hálózat összes többi kapcsolójáénál alacsonyabb legyen. 
+1, S1 spanning-tree vlan vlan-azonosító root primary
+2, S2 spanning-tree vlan 1 root secondary
+
+másik modszer 
+spanning-tree vlan vlan-azonosító priority érték - Ez finomhangolásra jo. A prioritás értéke 0 és 61440 közé eshet 4096-os lépésekben. 
+
+
+A PortFast beállítás a kapcsolóportot lezárt állapotból azonnal továbbító állapotba váltja.
+Szabályos PortFast beállítások esetén sosem érkezhetnek BPDU-k( különben hurok fog keletkezni )
+	interfacenként: spanning-tree portfast 
+	spanning-tree portfast default - globális konfigurációs parancs minden nem trönk interfészen engedélyezi a PortFast-ot.
+
+PC vagy szerver felé eső portokat PortFast módba szokás kapcsolni. 
+
+BPDU:
+spanning-tree bpduguard enable 
+spanning-tree portfast bpduguard default - globális konfigurációs parancs a BPDU-védelmet az összes PortFast-tal konfigurált porton bekapcsolja.
+
+
+Port szerepek: 
+    RP – gyökér port –
+    DP – kijelölt port – designated port
+    AP – tartalék port – bacup port – nem kijelölt
+    letiltott port – shut down port – le van állítva
+    szélső port – edge port – nem kapcsoló csatlakozik
+
+
+ÖSSZEFOGLALVA:
+Ellenőrzés:
+S3# show spanning-tree
+
+Megadjuk melyik legyen elsődleges, másodlagos gyökér:
+S1(config)# spanning-tree VLAN 1 root primary
+S2(config)# spanning-tree VLAN 1 root secondary
+
+Konkrét számmal adjuk meg a prioritást:
+S1(config)# spanning-tree VLAN 1 priority 24576
+
+Edge port – nem kapcsoló csatlakozik:
+S1(config-if)#spanning-tree bpduguard enable
+S1(config-if)#spanning-tree bpduguard disable 
+
+PortFast mód:
+S1(config-if)#spanning-tree portfast
+	
+Az összes port beállítása egyszerre(PortFast mód):
+S1(config)# spanning-tree portfast default
+
+bpduguard védelem bekapcsolása:
+S1(config-if)# spanning-tree bpduguard enable
+
+(bpduguard)Bekapcsolás az összes portra:
+S1(config)# spanning-tree portfast bpduguard default
+
+
+Rapid PVST+:
+S1(config)# spanning-tree mode rapid-pvst
+S1(config)# interface f0/2
+S1(config-if)# spanning-tree link-type point-to-point
+S1(config-if)#end
+
+újraegyeztetés:
+S1# clear spanning-tree detected-protocols
+clear spanning-tree detected protocols { [interface } { interface-type } { <interface-id>] } { [switch } { default] } 
+
+
+	   /Sw2\
+HSRP:    R1-SW1-R2   (arra a portra állítjuk be ami azonos hálózatra mutat)   
+R1(config)# int g0/0
+R1(config-if)# standby 1 ip "virtuális router IP"   - (egy új szabad ip ami nincs hozzárendelve 1 interfacehez sem)
+R1(config-if)# standby 1 priority 150               - Prioritási szám
+R1(config-if)# standby 1 preempt                    - (A preempt-el állítjuk be hogy elsődleges legyen az adott router)
+
+R2(config)# int g0/0
+R2(config-if)# standby 1 ip "virtuális router IP"
+
+És G0/1-en ugyan ez csak a másik hálózatból jelölünk ki egy virtuális címet + (R1(config-if)# standby 2 )
+
+Ell: 
+R1# show standby
+R1# show standby brief
+
+
+------------------------------------------------------------
 
 Példa:
+
 	enable
-	clock set 23:10:00 21 nov 2022
+	clock set 19:00:00 12 jan 2024
 	conf t
-	hostname Sw1
-	banner motd #alapkonfig#
+	hostname SW1
+	banner motd #Belepes csak meghatalmazassal!#
 	logging console
 	service timestamps log datetime msec
 	service timestamps debug datetime msec
 	line vty 0 15
 	password cisco
 	login
-	exec-timeout 2 30
+	exec-timeout 5
 	exit
 	line console 0
 	password cisco
 	login
-	exec-timeout 2 30
+	exec-timeout 5
 	exit
 	enable secret cisco
 	service password-encryption 
