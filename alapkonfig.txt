@@ -164,9 +164,7 @@ Naplózás/bejelentkezes/kiléptetés:
 	
 	Mennyi idő után lépjen ki automatikusan (pl:console kapcsolatból) - R1(config-line)#exec-timeout 2 30
 	Sikertelen bejelentkezések - R1(config)#login block-for 100 attempts 15 within 180
-	
---------------------------------------------------------
-syslog:
+
 
 	logging on
 	login on-failure log
@@ -228,8 +226,18 @@ A példában 8-as. Minden útválasztó, amelyben a 8-as szám van beállítva �
 
 
 --------------------------------------------------------
-
 OSPF:
+
+router ospf 1
+router-id 1.1.1.1
+default-information originate
+network "ip" "wildcard" area 0
+
+
+
+
+
+OSPF példa:
 
 
 R1:
@@ -278,6 +286,22 @@ no sh
 
 
 -----------------------------------------------------------------
+DHCP:
+
+ip dhcp excluded-address
+ip dhcp pool LAN1
+network 192.168.10.0 255.255.255.0
+default-router 192.168.10.1
+dns-server 192.168.11.5
+
+
+
+
+
+
+
+
+
 
 DHCP IPV4 / IPV6 PÉLDA:
 
@@ -346,21 +370,196 @@ PAT:
 ip nat inside source list 1 interface serial 0/1/1 overload
 access-list 1 permit "belsőhaloip" "hozzatartozowildcard"
 
-(ez így a belsődet 1 címre fordítja, ha többre kell akkor csinálj Pool-t mellé. (alább van példa))
+(ez így a belsődet 1 címre fordítja, ha többre kell akkor csinálj Pool-t mellé.
+
 
 Példa:
 
-	ip nat pool Po1 193.65.40.6 193.65.40.7 netmask 255.255.255.240
-	access-list 1 permit 192.168.0.0 0.0.0.255
-	ip nat inside source list 1 pool Po1 over
+	access-list 100 permit ip any any
+	ip nat inside source list 100 int g0/1 overload
 
 ------------------------------------------------------------
+ZPF:
+10.fejezet
+
+zone security zone-name
+class-map type inspect [match-any | match-all] class-map-name
+
+Router(config-cmap)# match access-group {acl-# | acl-name }
+Router(config-cmap)# match protocol protocol-name
+Router(config-cmap)# match class-map class-map-name
+
+
+
+
+------------------------------------------------------------
+ASA:
+
+Konfig mentése: 
+	write [memory]
+
+Secret pass:
+		enable password "pass"
+
+Vty pass:
+	passwd "password"
+
+static route:
+	route "if_name"
+
+Show parancsok:
+	show interface ip brief
+	show route
+	show xlate
+	
+
+PW titkosítás:
+	key config-key password-encryption
+
+	password encryption aes
+
+
+
+
+ASA-OSPF:
+	ASA1(config)# interface Ethernet0/2
+	ASA1(config-if)# ip address 202.49.13.1 255.255.255.0
+	ASA1(config-if)# nameif DMZ
+	ASA1(config-if)# security-level 50
+	ASA1(config-if)# ospf authentication message-digest
+	ASA1(config-if)# ospf message-digest-key 1 md5 cisco
+	ASA1(config-if)# exit
+
+	ASA1(config)# router ospf 1
+	ASA1(config-router)# network 202.49.12.0 255.255.255.0 area 0
+
+
+NTP:
+	ntp authenticate
+	ntp trusted-key 1
+	ntp authentication-key 1 md5 Yekptnssap1!
+	
+	ntp server "10.1.1.1" key 1 prefer        - prefer csak key 1 -nél kell 
+
+
+
+DNS:
+	dns domain-lookup "inside/interfacename"
+	dns server-group "DefaultDNS"
+
+	VPN-hez: tunnel-group parancs
+
+	name-server "10.1.1.5" "dns2havan"
+	domain-name "example.com"
+
+AAA:
+	aaa authentication ssh console lOCAL
+	aaa authentication telnet console lOCAL
+
+
+Telnet/SSH:
+	telnet 192.168.1.3 255.255.255.255 INSIDE   
+	telnet timeout 3    
+
+	show run telnet   
+	show ssh
+	(hasonló csak ssh parancs) (timeout "perc" pl: 3p tétlenség után kidob)
+
+
+
+	username ADMIN password cisco
+	aaa authentication ssh console LOCAL
+	crypto key generate rsa modulus 2048
+	ssh "belsőPcIP" 255.255.255.255 INSIDE
+	ssh "külsőPcIp" 255.255.255.255 OUTSIDE
+	ssh version 2
 
 
 
 
 
 
+DHCP:
+	
+dhcpd address IP_address1 [ -IP_address2 ] if_name 	-	Létrehoz egy DHCP-címkészletet, amelyben az IP_cím1 a készlet kezdete, az IP_cím2 pedig a készlet vége, kötőjellel elválasztva. A címkészletnek ugyanazon az alhálózaton kell lennie, mint az ASA interfésznek. (name-if amit az interface-en az ifname-el megadtál)
+
+dhcpd dns dns1 [ dns2 ] 				-	(Opcionális) Megadja a DNS-kiszolgáló(k) IP-címét.
+
+dhcpd lease lease_length				-	(Opcionális) Módosítja az ügyfélnek adott bérleti hosszt, amely másodpercben az az idő, ameddig az ügyfél használhatja a hozzárendelt IP-címét a bérlet lejárta előtt. A lease_length alapértelmezett értéke 3600 másodperc (1 óra), de lehet 0 és 1 048 575 másodperc közötti érték is. 
+
+dhcpd domain domain_name 				-	(Opcionális) Megadja az ügyfélhez rendelt tartománynevet.
+
+dhcpd enable if_name 					-	Engedélyezi a DHCP-kiszolgáló szolgáltatást (démont) az ASA felületén (általában a belső interfészen). 
+	
+	
+dhcpd address 192.168.1.10-192.168.1.250 INSIDE
+dhcpd dns "IP"
+dhcpd lease 1800 
+dhcpd enable g1/1
+
+
+
+
+
+
+
+
+
+
+
+ASA-Példa:
+	
+	conf t
+	hostname ASA
+	clock set  12:00:00 13 jan 2024
+	enable password cisco
+	passwd cisco
+
+
+	username ADMIN password cisco
+	aaa authentication ssh console LOCAL
+	crypto key generate rsa modulus 2048
+	ssh "belsőPcIP" 255.255.255.255 INSIDE
+	ssh "külsőPcIp" 255.255.255.255 OUTSIDE
+	ssh version 2
+
+
+	interface g1/1   
+	nameif OUTSIDE   
+	security-level 0   
+	ip address     
+	no shutdown   
+
+	interface g1/2   
+	nameif INSIDE   
+	security-level 100   
+	ip address     
+	no shutdown 
+
+  	interface g1/3 
+	nameif DMZ   
+	security-level 50   
+	ip address    
+	no shutdown   
+	exit  
+
+
+	dhcpd address 192.168.1.10-192.168.1.250 INSIDE
+	dhcpd dns "IP"
+	dhcpd lease 1800 
+	dhcpd enable g1/1
+
+------------------------------------------------------------
+BGP:
+
+	router bgp "szám pl:100"
+	neighbor "szomszédportIP" remote-as "router bgp száma pl:200"
+	network "belső hálózat IP" mask "maszk"
+
+
+
+
+------------------------------------------------------------
 
 Példa:
 	enable
